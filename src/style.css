@@ -1,1 +1,133 @@
-/* Moldures Designer — global styles will be added in subsequent tasks */
+@import "tailwindcss";
+
+/* ── Design tokens → génère les utilitaires Tailwind (bg-bg, text-muted, border-border…) ── */
+@theme {
+  --font-family-sans:   system-ui, -apple-system, sans-serif;
+  --color-bg:           #1e1e2e;
+  --color-surface:      #2a2a3e;
+  --color-border:       #3a3a5e;
+  --color-text:         #e0e0f0;
+  --color-muted:        #8888aa;
+  --color-accent:       #5b8dee;
+  --color-accent-hover: #7aa3f5;
+  --color-danger:       #e05555;
+}
+
+/* ── Aliases de compatibilité pour les styles inline dans les templates TS ── */
+/* Les templates utilisent var(--text-muted) et var(--accent) directement     */
+@layer base {
+  :root {
+    --text-muted: var(--color-muted);
+    --accent:     var(--color-accent);
+  }
+}
+
+/* ── Resets de base ──────────────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-family-sans); }
+  input, select, textarea { font-family: inherit; }
+}
+
+/* ── Composants réutilisables (utilisés dans les templates TS) ───────────────── */
+@layer components {
+
+  /* Boutons */
+  button, .btn {
+    @apply px-3 py-1.5 rounded-md border border-border bg-surface text-text text-sm
+           cursor-pointer transition-colors duration-150;
+    &:hover { @apply bg-border; }
+  }
+  button.primary, .btn.primary {
+    @apply bg-accent border-accent text-white;
+    &:hover { @apply bg-accent-hover border-accent-hover; }
+  }
+  button.danger, .btn.danger {
+    @apply bg-transparent border-danger/40 text-danger;
+    &:hover { @apply bg-danger/10; }
+  }
+
+  /* Onglets du panneau */
+  .tab-btn {
+    @apply flex-1 py-2.5 px-1 bg-transparent border-0 border-b-2 border-transparent
+           text-muted text-lg cursor-pointer transition-colors duration-150;
+    &:hover  { @apply text-text; }
+    &.active { @apply text-accent border-accent; }
+  }
+
+  /* Champs de formulaire */
+  .field        { @apply mb-2.5; }
+  .field > label { @apply text-xs text-muted block mb-1; }
+  .field-row    { @apply flex gap-1.5 items-end; }
+  .field-row > .field { @apply flex-1; }
+
+  /* Inputs & selects */
+  input[type="number"],
+  input[type="text"],
+  input[type="password"],
+  select {
+    @apply w-full px-2 py-1.5 bg-bg border border-border rounded text-text text-sm;
+    &:focus { @apply outline-none border-accent; }
+  }
+  input[type="color"]    { @apply w-9 h-7 p-0.5 border border-border rounded cursor-pointer; }
+  input[type="range"]    { @apply w-full; accent-color: var(--color-accent); }
+  input[type="checkbox"] { accent-color: var(--color-accent); }
+
+  /* Listes du panneau */
+  .section-title { @apply text-xs font-bold uppercase text-muted mt-3.5 mb-2 tracking-wider; }
+  .panel-list    { @apply list-none; }
+  .panel-list li {
+    @apply flex items-center gap-1.5 py-1.5 border-b border-border text-sm;
+    &.active-wall { @apply text-accent; }
+  }
+  .panel-list li .actions { @apply ml-auto flex gap-1; }
+
+  /* Spinner Gemini */
+  .spinner {
+    @apply w-10 h-10 rounded-full border-4 border-border;
+    border-top-color: var(--color-accent);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast */
+  .app-toast {
+    @apply fixed bottom-16 left-1/2 -translate-x-1/2 translate-y-3
+           bg-surface border border-border rounded-full px-4 py-2 text-sm
+           opacity-0 pointer-events-none;
+    z-index: 1000;
+    transition: opacity 0.2s, transform 0.2s;
+    &.app-toast--visible { @apply opacity-100 translate-y-0; }
+    &.app-toast--error   { @apply border-danger text-danger; }
+  }
+
+  /* Modal */
+  .app-modal {
+    @apply fixed inset-0 bg-black/75 flex items-center justify-center;
+    z-index: 500;
+    &.hidden { display: none; }
+  }
+  .app-modal__inner {
+    @apply relative bg-surface border border-border rounded-xl p-5
+           max-w-[90vw] max-h-[90vh] overflow-auto;
+  }
+  #modal-close {
+    @apply absolute top-2 right-2 bg-transparent border-0 text-muted cursor-pointer
+           text-base leading-none p-1;
+    &:hover { @apply text-text; }
+  }
+
+  /* Tableaux */
+  table { @apply w-full border-collapse text-xs; }
+  th    { @apply text-left text-muted px-1.5 py-1 border-b border-border font-medium; }
+  td    { @apply px-1.5 py-1 border-b border-border; }
+
+  /* Badges */
+  .badge-restored  { @apply bg-green-900/50 text-green-400 px-2 py-0.5 rounded text-xs; }
+  .badge-collision { @apply bg-red-900/50   text-red-400   px-2 py-0.5 rounded text-xs; }
+
+  /* Zones de séparateur */
+  .zone-top    { @apply border-l-4 border-accent pl-2; }
+  .zone-bottom { @apply border-l-4 border-pink-500 pl-2; }
+  .zone-title  { @apply text-sm font-semibold mb-2; }
+}

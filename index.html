@@ -1,12 +1,74 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Moldures Designer</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moldures Designer</title>
+</head>
+<body class="bg-bg text-text h-dvh overflow-hidden font-sans">
+
+  <div id="app" class="flex flex-col h-dvh">
+
+    <header id="app-header"
+      class="h-12 shrink-0 flex items-center gap-3 px-4 bg-surface border-b border-border">
+      <span class="font-bold text-accent">🏠 Moldures Designer</span>
+      <span id="project-name-display" class="text-muted text-sm"></span>
+      <div class="ml-auto flex gap-2 items-center">
+        <button id="btn-add-wall">+ Mur</button>
+        <button id="btn-settings">⚙️</button>
+      </div>
+    </header>
+
+    <main class="flex flex-1 overflow-hidden">
+
+      <div id="canvas-container"
+        class="flex-1 relative bg-[#111] flex items-center justify-center">
+        <canvas id="main-canvas" class="block"></canvas>
+        <div id="canvas-overlay"
+          class="hidden absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-3">
+          <div class="spinner"></div>
+          <p class="text-muted text-sm">Génération en cours…</p>
+        </div>
+      </div>
+
+      <aside id="side-panel"
+        class="w-[300px] shrink-0 flex flex-col bg-surface border-l border-border">
+        <nav id="panel-tabs" class="flex border-b border-border">
+          <button class="tab-btn active" data-tab="project">📁</button>
+          <button class="tab-btn" data-tab="wall">🧱</button>
+          <button class="tab-btn" data-tab="frames">🔲</button>
+          <button class="tab-btn" data-tab="obstacles">🚧</button>
+          <button class="tab-btn" data-tab="moldings">🪵</button>
+          <button class="tab-btn" data-tab="budget">💰</button>
+        </nav>
+        <div id="panel-content" class="flex-1 overflow-y-auto p-3"></div>
+      </aside>
+
+    </main>
+
+    <footer id="app-toolbar"
+      class="h-11 shrink-0 flex items-center gap-2 px-4 bg-surface border-t border-border">
+      <button id="btn-pdf">📄 PDF</button>
+      <button id="btn-pdf-all">📄 PDF complet</button>
+      <button id="btn-gemini">🤖 Gemini</button>
+      <button id="btn-save">💾 Sauvegarder</button>
+      <label class="btn" for="btn-import">📂 Charger</label>
+      <input type="file" id="btn-import" accept=".json" class="hidden" />
+    </footer>
+
+  </div>
+
+  <!-- Toast (classe gérée par toast.ts) -->
+  <div id="app-toast" class="app-toast"></div>
+
+  <!-- Modal (hidden/visible géré par classList en JS) -->
+  <div id="app-modal" class="app-modal hidden">
+    <div class="app-modal__inner">
+      <button id="modal-close">✕</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/index.ts"></script>
+</body>
 </html>

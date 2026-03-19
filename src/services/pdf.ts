@@ -21,7 +21,8 @@ function getHighResDataUrl(canvas: HTMLCanvasElement, wall: Wall, project: Proje
   off.height = canvas.clientHeight * EXPORT_SCALE
   off.style.width  = canvas.clientWidth  + 'px'
   off.style.height = canvas.clientHeight + 'px'
-  const ctx = off.getContext('2d')!
+  const ctx = off.getContext('2d')
+  if (!ctx) return ''
   ctx.scale(EXPORT_SCALE, EXPORT_SCALE)
   renderToCanvas(off, wall, project)          // ← pure, pas de side-effects
   return off.toDataURL('image/png')
@@ -130,7 +131,8 @@ function addWallPage(pdf: jsPDF, canvas: HTMLCanvasElement, project: Project, wa
   })
 
   const budget = computeBudget(project, wall)
-  const budgetY = (pdf as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10
+  const lastTable = (pdf as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
+  const budgetY = (lastTable?.finalY ?? 80) + 10
 
   pdf.setFontSize(11)
   pdf.setFont('helvetica', 'bold')

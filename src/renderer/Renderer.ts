@@ -25,15 +25,17 @@ export function resetZoom(): void {
   _camera.zoom = 1
 }
 
-/** Wire mouse-wheel zoom on the canvas. Call once after boot(). */
-export function initZoom(canvas: HTMLCanvasElement): void {
-  canvas.addEventListener('wheel', e => {
+/** Wire mouse-wheel zoom on the canvas. Call once after boot(). Returns a cleanup function. */
+export function initZoom(canvas: HTMLCanvasElement): () => void {
+  const handler = (e: WheelEvent) => {
     e.preventDefault()
     _camera.zoom = Math.max(0.2, Math.min(8, _camera.zoom * (e.deltaY > 0 ? 0.9 : 1.1)))
     if (_lastCanvas && _lastWall && _lastProject) {
       renderWithState(_lastCanvas, _lastWall, _lastProject)
     }
-  }, { passive: false })
+  }
+  canvas.addEventListener('wheel', handler, { passive: false })
+  return () => canvas.removeEventListener('wheel', handler)
 }
 
 export function setupCanvas(canvas: HTMLCanvasElement, container: HTMLElement): void {
@@ -44,7 +46,8 @@ export function setupCanvas(canvas: HTMLCanvasElement, container: HTMLElement): 
   canvas.height = h * dpr
   canvas.style.width  = w + 'px'
   canvas.style.height = h + 'px'
-  const ctx = canvas.getContext('2d')!
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
   ctx.scale(dpr, dpr)
 }
 
@@ -57,6 +60,7 @@ export function renderToCanvas(canvas: HTMLCanvasElement, wall: Wall, project: P
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
+  // style.width/height set by setupCanvas (HiDPI); fallback = physical size for off-screen canvases
   const cssW = parseFloat(canvas.style.width)  || canvas.width
   const cssH = parseFloat(canvas.style.height) || canvas.height
 
@@ -92,6 +96,7 @@ export function renderWithState(canvas: HTMLCanvasElement, wall: Wall, project: 
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
+  // style.width/height set by setupCanvas (HiDPI); fallback = physical size for off-screen canvases
   const cssW = parseFloat(canvas.style.width)  || canvas.width
   const cssH = parseFloat(canvas.style.height) || canvas.height
 

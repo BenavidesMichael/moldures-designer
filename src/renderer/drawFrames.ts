@@ -4,6 +4,9 @@ import type { Frame, Rect, Molding } from '../types/index.js'
 import { cm } from './scale.js'
 import { computeFrameLayout, computeZoneRect, computeNestedRect } from '../services/layout.js'
 
+const BEVEL_RATIO = 0.4
+const BEVEL_MIN_PX = 2
+
 export function drawFrames(rc: RenderContext): void {
   const { wall, project } = rc
 
@@ -38,21 +41,27 @@ function drawFrame(rc: RenderContext, frame: Frame, rect: Rect, moldings: Moldin
   // Draw collision highlight first (behind frame)
   if (hasCollisionWithAnyObstacle(rc, rect)) {
     const { ctx, scale, ox, oy } = rc
+    ctx.save()
     ctx.strokeStyle = 'rgba(255,0,0,0.6)'
     ctx.lineWidth = 3
     ctx.strokeRect(ox + cm(rect.x, scale), oy + cm(rect.y, scale), cm(rect.width, scale), cm(rect.height, scale))
+    ctx.restore()
   }
 
   drawBeveledBar(rc, rect, molding)
 
   // Nested levels
   let cumulOffset = 0
+  let previousMolding = molding
   for (const level of frame.nestedLevels) {
-    cumulOffset += level.offset + molding.width / 10
+    cumulOffset += level.offset + previousMolding.width / 10
     const nestedRect = computeNestedRect(rect, cumulOffset)
     if (nestedRect.width <= 0 || nestedRect.height <= 0) break
     const nestedMolding = rc.project.moldings.find(m => m.id === level.moldingId)
-    if (nestedMolding) drawBeveledBar(rc, nestedRect, nestedMolding)
+    if (nestedMolding) {
+      drawBeveledBar(rc, nestedRect, nestedMolding)
+      previousMolding = nestedMolding
+    }
   }
 }
 
@@ -60,7 +69,7 @@ export function drawBeveledBar(rc: RenderContext, rectCm: Rect, molding: Molding
   const { ctx, scale, ox, oy, wall } = rc
   const moldingColor = wall.colors.moldings !== '' ? wall.colors.moldings : molding.color
   const t = cm(molding.thickness / 10, scale) // thickness in px (mm→cm→px)
-  const t2 = Math.max(2, t * 0.4)             // bevel depth
+  const t2 = Math.max(BEVEL_MIN_PX, t * BEVEL_RATIO) // bevel depth
 
   const x = ox + cm(rectCm.x, scale)
   const y = oy + cm(rectCm.y, scale)

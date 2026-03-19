@@ -107,7 +107,8 @@ function bindToolbar(): void {
     const { geminiApiKey, geminiModel } = getState()
     if (!geminiApiKey) { showSettingsModal(); return }
 
-    const overlay = document.getElementById('canvas-overlay')!
+    const overlay = document.getElementById('canvas-overlay')
+    if (!overlay) return
     overlay.classList.remove('hidden')
     try {
       const base64 = await generateWallRender(wall, getProject(), geminiApiKey, geminiModel)
@@ -168,9 +169,12 @@ function bindModal(): void {
 
 function showSettingsModal(): void {
   const { geminiApiKey, geminiModel } = getState()
+  const modalContent = document.getElementById('modal-content')
+  const appModal = document.getElementById('app-modal')
+  if (!modalContent || !appModal) return
   // Audit fix: h() escapes geminiApiKey — prevents attribute injection XSS
   // (e.g. a key containing `"` would break value="${geminiApiKey}" without escaping)
-  document.getElementById('modal-content')!.innerHTML = `
+  modalContent.innerHTML = `
     <div style="min-width:280px">
       <h3 style="margin-bottom:12px">⚙️ Paramètres</h3>
       <div class="field">
@@ -187,19 +191,23 @@ function showSettingsModal(): void {
       </div>
       <button id="settings-save" class="primary" style="width:100%;margin-top:10px">Enregistrer</button>
     </div>`
-  document.getElementById('app-modal')!.classList.remove('hidden')
+  appModal.classList.remove('hidden')
   document.getElementById('settings-save')?.addEventListener('click', () => {
     const key   = (document.getElementById('setting-gemini-key')   as HTMLInputElement).value
-    const model = (document.getElementById('setting-gemini-model') as HTMLSelectElement).value as 'gemini-flash' | 'imagen-4'
+    const raw   = (document.getElementById('setting-gemini-model') as HTMLSelectElement).value
+    const model: 'gemini-flash' | 'imagen-4' = raw === 'imagen-4' ? 'imagen-4' : 'gemini-flash'
     saveGeminiKey(key)
     setState(s => produce(s, draft => { draft.geminiApiKey = key; draft.geminiModel = model }))
-    document.getElementById('app-modal')!.classList.add('hidden')
+    appModal.classList.add('hidden')
     showToast('✓ Paramètres sauvegardés')
   })
 }
 
 function showImageModal(base64: string): void {
-  document.getElementById('modal-content')!.innerHTML = `
+  const modalContent = document.getElementById('modal-content')
+  const appModal = document.getElementById('app-modal')
+  if (!modalContent || !appModal) return
+  modalContent.innerHTML = `
     <div>
       <h3 style="margin-bottom:12px">🤖 Rendu Gemini</h3>
       <img src="data:image/png;base64,${base64}" style="max-width:100%;border-radius:6px" />
@@ -207,7 +215,7 @@ function showImageModal(base64: string): void {
         <a href="data:image/png;base64,${base64}" download="rendu-gemini.png" class="btn primary">⬇ Télécharger</a>
       </div>
     </div>`
-  document.getElementById('app-modal')!.classList.remove('hidden')
+  appModal.classList.remove('hidden')
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────

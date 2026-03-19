@@ -11,12 +11,11 @@ const MODEL_IDS: Record<GeminiModel, string> = {
 const TIMEOUT_MS = 30_000
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new GeminiError('Délai dépassé. Réessayez.')), ms)
-    ),
-  ])
+  let timerId: ReturnType<typeof setTimeout>
+  const timeout = new Promise<T>((_, reject) => {
+    timerId = setTimeout(() => reject(new GeminiError('Délai dépassé. Réessayez.')), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timerId))
 }
 
 export async function generateWallRender(

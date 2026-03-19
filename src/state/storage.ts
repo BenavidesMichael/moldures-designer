@@ -81,7 +81,7 @@ export function validateAndMigrate(raw: unknown): Project {
   }
 
   // Provide default version if missing
-  const withDefaults = {
+  const withDefaults: Record<string, unknown> = {
     ...obj,
     version: obj.version ?? 1,
   }

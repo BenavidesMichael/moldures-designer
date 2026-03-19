@@ -30,7 +30,8 @@ function renameWall(id: string, currentName: string): void {
 
 function duplicateWall(id: string): void {
   const project = getProject()
-  const wall = project.walls.find(w => w.id === id)!
+  const wall = project.walls.find(w => w.id === id)
+  if (!wall) return
   const copy: Wall = { ...wall, id: nanoid(), name: wall.name + ' (copie)' }
   setState(s => produce(s, draft => {
     draft.project.walls.push(copy)

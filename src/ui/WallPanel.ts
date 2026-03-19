@@ -66,7 +66,7 @@ export function WallPanel() {
       </div>
       <div class="field">
         <label>Moulures</label>
-        <input type="color" .value=${wall.colors.moldings || '#e8d5b0'}
+        <input type="color" id="color-moldings" .value=${wall.colors.moldings || '#e8d5b0'}
                @input=${(e: Event) => {
                  const override = (document.getElementById('color-moldings-override') as HTMLInputElement | null)?.checked
                  updateWall(w => { w.colors.moldings = override ? (e.target as HTMLInputElement).value : '' })

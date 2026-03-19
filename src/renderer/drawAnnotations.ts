@@ -23,8 +23,8 @@ export function drawAnnotations(rc: RenderContext): void {
 
   // Frame annotations
   for (const zone of wall.zones) {
-    const zoneRect = computeZoneRect(wall, zone.type)
     if (zone.frames.length === 0) continue
+    const zoneRect = computeZoneRect(wall, zone.type)
     const frameRects = computeFrameLayout(zone, zoneRect)
     for (const rect of frameRects) {
       const px = ox + cm(rect.x, scale)

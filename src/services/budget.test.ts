@@ -113,4 +113,35 @@ describe('computeBudget', () => {
     expect(budget.totalCost).toBe(0)
     expect(budget.lines).toHaveLength(0)
   })
+
+  it('handles nested frame levels with distinct molding widths', () => {
+    const project: Project = {
+      ...makeProject(),
+      moldings: [
+        { id: 'm1', name: 'Outer', reference: 'A', width: 30, thickness: 29, barLength: 270, pricePerBar: 4.50, color: '#fff' },
+        { id: 'm2', name: 'Inner', reference: 'B', width: 10, thickness: 15, barLength: 270, pricePerBar: 3.00, color: '#fff' },
+      ],
+    }
+    const wall: Wall = {
+      ...makeWall(200, 100, 10),
+      zones: [{
+        id: 'z1', type: 'full',
+        layout: { frameCount: 1, marginTop: 5, marginBottom: 5, marginLeft: 5, marginRight: 5, gapBetweenFrames: 0, customWidths: [0], customHeights: [0] },
+        frames: [{
+          id: 'f1', moldingId: 'm1', cornerStyle: 'miter',
+          nestedLevels: [
+            { moldingId: 'm2', cornerStyle: 'miter', offset: 2 }, // 2cm offset + m1.width(30mm=3cm) = 5cm inset from outer
+          ],
+        }],
+      }],
+    }
+    const budget = computeBudget(project, wall)
+    // Outer frame: zoneRect {w:200,h:90}, frameRect {x:5,y:5,w:190,h:80} → perimeter = 2*(190+80)=540cm=5.4m
+    // Inner frame: inset by (offset=2 + outerWidth=3cm)=5cm → {x:10,y:10,w:180,h:70} → perimeter = 2*(180+70)=500cm=5.0m
+    expect(budget.lines).toHaveLength(2)
+    const outerLine = budget.lines.find(l => l.moldingId === 'm1')!
+    const innerLine = budget.lines.find(l => l.moldingId === 'm2')!
+    expect(outerLine.linearMeters).toBeCloseTo(5.4)
+    expect(innerLine.linearMeters).toBeCloseTo(5.0)
+  })
 })

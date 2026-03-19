@@ -1,5 +1,9 @@
-import type { Project, Wall, Molding, Rosette, BudgetResult, BudgetLine, RosetteBudgetLine, Rect } from '../types/index.js'
+import type { Project, Wall, Molding, Rosette, BudgetResult, BudgetLine, RosetteBudgetLine, Rect, Frame } from '../types/index.js'
 import { computeFrameLayout, computeZoneRect, computeNestedRect } from './layout.js'
+
+const FRAME_WASTE_FACTOR = 1.15
+const CORNERS_PER_FRAME = 4
+const MM_TO_CM = 0.1
 
 export function computeBudget(project: Project, wall: Wall): BudgetResult {
   // Index upfront — O(1) lookup instead of find() O(n) in loops
@@ -19,7 +23,7 @@ export function computeBudget(project: Project, wall: Wall): BudgetResult {
     for (let i = 0; i < zone.frames.length; i++) {
       const frame = zone.frames[i]!
       const rect = frameRects[i]!
-      accumulateFrame(project, frame, rect, linearMeters, rosetteCount, moldingMap, rosetteMap)
+      accumulateFrame(frame, rect, linearMeters, rosetteCount, moldingMap, rosetteMap)
     }
   }
 
@@ -44,7 +48,7 @@ export function computeBudget(project: Project, wall: Wall): BudgetResult {
     const railMeters = railData?.moldingId === moldingId ? railData.meters : 0
 
     // Frame portion: +15% waste
-    const frameWastedMeters = frameMeters * 1.15
+    const frameWastedMeters = frameMeters * FRAME_WASTE_FACTOR
     // Rail portion: no waste
     const totalMeters = frameWastedMeters + railMeters
 
@@ -54,7 +58,7 @@ export function computeBudget(project: Project, wall: Wall): BudgetResult {
     const barsNeeded = Math.ceil(totalMeters / barLengthM)
 
     // Determine waste factor for display (1.15 if frames only, 1.0 if rail only)
-    const wasteFactor = frameMeters > 0 ? 1.15 : 1.0
+    const wasteFactor = frameMeters > 0 ? FRAME_WASTE_FACTOR : 1.0
 
     lines.push({
       moldingId,
@@ -90,8 +94,7 @@ export function computeBudget(project: Project, wall: Wall): BudgetResult {
 }
 
 function accumulateFrame(
-  project: Project,
-  frame: import('../types/index.js').Frame,
+  frame: Frame,
   rect: Rect,
   linearMeters: Record<string, number>,
   rosetteCount: Record<string, number>,
@@ -102,12 +105,14 @@ function accumulateFrame(
 
   // Nested levels: cumulative offset from outer frame border
   let cumulOffset = 0
+  let previousMoldingId = frame.moldingId
   for (const level of frame.nestedLevels) {
-    const parentMolding = moldingMap.get(frame.moldingId)
-    cumulOffset += level.offset + (parentMolding ? parentMolding.width / 10 : 0) // mm→cm
+    const parentMolding = moldingMap.get(previousMoldingId)
+    cumulOffset += level.offset + (parentMolding ? parentMolding.width * MM_TO_CM : 0) // mm→cm
     const nestedRect = computeNestedRect(rect, cumulOffset)
     if (nestedRect.width <= 0 || nestedRect.height <= 0) break
     addPerimeter(level.moldingId, nestedRect, level.cornerStyle, level.rosetteId, linearMeters, rosetteCount, rosetteMap)
+    previousMoldingId = level.moldingId
   }
 }
 
@@ -128,7 +133,7 @@ function addPerimeter(
       const straightW = rect.width - 2 * rosette.size
       const straightH = rect.height - 2 * rosette.size
       meters = (2 * (Math.max(0, straightW) + Math.max(0, straightH))) / 100
-      rosetteCount[rosetteId] = (rosetteCount[rosetteId] ?? 0) + 4
+      rosetteCount[rosetteId] = (rosetteCount[rosetteId] ?? 0) + CORNERS_PER_FRAME
     } else {
       meters = 2 * (rect.width + rect.height) / 100
     }

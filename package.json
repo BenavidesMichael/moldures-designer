@@ -1,0 +1,32 @@
+{
+  "name": "moldures-designer",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:ui": "vitest --ui"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.2",
+    "@vitest/ui": "^2.1.9",
+    "jsdom": "^25.0.1",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.2",
+    "vitest": "^2.1.9"
+  },
+  "dependencies": {
+    "@google/genai": "^0.7.0",
+    "color2k": "^2.0.3",
+    "immer": "^10.2.0",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
+    "lit-html": "^3.3.2",
+    "nanoid": "^5.1.7",
+    "zod": "^3.25.76"
+  }
+}

@@ -95,8 +95,10 @@ function saveMolding(existingId?: string): void {
 
 function addRosette(): void {
   const name = prompt('Nom de la rosette :'); if (!name) return
-  const size  = Number(prompt('Taille (cm) :', '20.5'))
-  const price = Number(prompt('Prix/pièce (€) :', '9.68'))
+  const sizeStr  = prompt('Taille (cm) :', '20.5');  if (sizeStr === null) return
+  const priceStr = prompt('Prix/pièce (€) :', '9.68'); if (priceStr === null) return
+  const size  = Number(sizeStr)
+  const price = Number(priceStr)
   const r: Rosette = { id: nanoid(), name, reference: '', size, pricePerPiece: price }
   setState(s => produce(s, draft => { draft.project.rosettes.push(r) }))
 }

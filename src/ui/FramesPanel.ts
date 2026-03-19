@@ -72,10 +72,10 @@ function zoneSection(zone: Zone, moldingOptions: ReturnType<typeof html>[]) {
           <div class="field-row">
             <div class="field"><label>Décalage (cm)</label>
               <input type="number" .value=${lvl.offset} min="0" step="0.5"
-                     @input=${(e: Event) => updateZone(zone.id, z => { if (z.frames[0]) z.frames[0].nestedLevels[j]!.offset = Number((e.target as HTMLInputElement).value) })} />
+                     @input=${(e: Event) => updateZone(zone.id, z => { const lvl = z.frames[0]?.nestedLevels[j]; if (lvl) lvl.offset = Number((e.target as HTMLInputElement).value) })} />
             </div>
             <div class="field"><label>Moulure</label>
-              <select @change=${(e: Event) => updateZone(zone.id, z => { if (z.frames[0]) z.frames[0].nestedLevels[j]!.moldingId = (e.target as HTMLSelectElement).value })}>
+              <select @change=${(e: Event) => updateZone(zone.id, z => { const lvl = z.frames[0]?.nestedLevels[j]; if (lvl) lvl.moldingId = (e.target as HTMLSelectElement).value })}>
                 ${moldingOptions}
               </select>
             </div>

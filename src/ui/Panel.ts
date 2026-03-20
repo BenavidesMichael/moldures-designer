@@ -30,8 +30,12 @@ export function initPanel(): void {
     const tab = btn.dataset['tab'] as TabId
     if (!tab || tab === activeTab) return
     activeTab = tab
-    tabs.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+    tabs.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('active')
+      b.setAttribute('aria-selected', 'false')
+    })
     btn.classList.add('active')
+    btn.setAttribute('aria-selected', 'true')
     renderPanel()
   })
 

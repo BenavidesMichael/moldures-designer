@@ -157,12 +157,13 @@ function bindKeyboard(): void {
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
 function bindModal(): void {
+  const appModal = document.getElementById('app-modal')
   document.getElementById('modal-close')?.addEventListener('click', () => {
-    document.getElementById('app-modal')!.classList.add('hidden')
+    appModal?.classList.add('hidden')
   })
-  document.getElementById('app-modal')?.addEventListener('click', (e) => {
+  appModal?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) {
-      document.getElementById('app-modal')!.classList.add('hidden')
+      appModal.classList.add('hidden')
     }
   })
 }

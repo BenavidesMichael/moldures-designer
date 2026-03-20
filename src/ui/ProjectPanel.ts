@@ -1,31 +1,32 @@
-import { html } from 'lit-html'
+import { html, render } from 'lit-html'
 import { nanoid } from 'nanoid'
 import { produce } from 'immer'
-import { getProject, setState } from '../state/AppState.js'
+import { getProject, setState, undo } from '../state/AppState.js'
 import { exportProject, importProject, clearStorage } from '../state/storage.js'
 import { showToast } from './toast.js'
+import { showInputModal } from './modal.js'
 import { makeDefaultProject } from '../state/defaults.js'
 import type { Wall } from '../types/index.js'
 
 // Events inlinés dans le template — pas besoin de registerPanelEvents
 
 function addWall(): void {
-  const name = prompt('Nom du mur :', 'Nouveau mur')
-  if (!name) return
-  const wall: Wall = { ...makeDefaultProject().walls[0]!, id: nanoid(), name }
-  setState(s => produce(s, draft => {
-    draft.project.walls.push(wall)
-    draft.project.activeWallId = wall.id
-  }))
+  showInputModal('Nouveau mur', 'Nouveau mur', name => {
+    const wall: Wall = { ...makeDefaultProject().walls[0]!, id: nanoid(), name }
+    setState(s => produce(s, draft => {
+      draft.project.walls.push(wall)
+      draft.project.activeWallId = wall.id
+    }))
+  })
 }
 
 function renameWall(id: string, currentName: string): void {
-  const name = prompt('Nouveau nom :', currentName)
-  if (!name) return
-  setState(s => produce(s, draft => {
-    const w = draft.project.walls.find(w => w.id === id)
-    if (w) w.name = name
-  }))
+  showInputModal('Renommer le mur', currentName, name => {
+    setState(s => produce(s, draft => {
+      const w = draft.project.walls.find(w => w.id === id)
+      if (w) w.name = name
+    }))
+  })
 }
 
 function duplicateWall(id: string): void {
@@ -40,7 +41,7 @@ function duplicateWall(id: string): void {
 }
 
 function deleteWall(id: string): void {
-  if (!confirm('Supprimer ce mur ?')) return
+  const wallName = getProject().walls.find(w => w.id === id)?.name ?? 'Mur'
   setState(s => produce(s, draft => {
     const remaining = draft.project.walls.filter(w => w.id !== id)
     draft.project.walls = remaining.length > 0 ? remaining : makeDefaultProject().walls
@@ -48,6 +49,7 @@ function deleteWall(id: string): void {
       draft.project.activeWallId = draft.project.walls[0]!.id
     }
   }))
+  showToast(`Mur "${wallName}" supprimé`, 'success', { label: 'Annuler', onClick: undo })
 }
 
 async function handleImport(e: Event): Promise<void> {
@@ -63,10 +65,38 @@ async function handleImport(e: Event): Promise<void> {
 }
 
 function resetProject(): void {
-  if (!confirm('Réinitialiser le projet ? Toutes les données seront perdues.')) return
-  clearStorage()
-  setState(s => produce(s, draft => { draft.project = makeDefaultProject() }))
-  showToast('🔄 Projet réinitialisé')
+  showResetConfirmModal()
+}
+
+/** @internal — exported for tests only */
+export function showResetConfirmModal(): void {
+  const content = document.getElementById('modal-content')
+  const modal = document.getElementById('app-modal')
+  if (!content || !modal) return
+
+  render(html`
+    <div style="min-width:280px">
+      <h3 style="margin-bottom:12px">⚠ Réinitialiser le projet ?</h3>
+      <p style="color:var(--text-muted);margin-bottom:16px">
+        Toutes les données seront perdues.<br/>
+        Cette action peut être annulée avec Ctrl+Z.
+      </p>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button @click=${() => modal.classList.add('hidden')}>
+          Annuler
+        </button>
+        <button class="danger" @click=${() => {
+          clearStorage()
+          setState(s => produce(s, draft => { draft.project = makeDefaultProject() }))
+          modal.classList.add('hidden')
+          showToast('🔄 Projet réinitialisé')
+        }}>
+          Réinitialiser →
+        </button>
+      </div>
+    </div>
+  `, content)
+  modal.classList.remove('hidden')
 }
 
 export function ProjectPanel() {

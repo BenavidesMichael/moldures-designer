@@ -12,7 +12,7 @@ export function MoldingsPanel(): TemplateResult {
     <div class="section-title">Moulures</div>
     <ul class="panel-list">
       ${project.moldings.length === 0
-        ? html`<li style="color:var(--text-muted)">Aucune moulure</li>`
+        ? html`<li class="empty-hint"><strong>Aucune moulure</strong>Ajoutez les profils de moulures<br>disponibles dans votre stock.</li>`
         : project.moldings.map(m => html`
           <li>
             <span style="display:inline-block;width:12px;height:12px;background:${m.color};border-radius:2px;margin-right:6px"></span>
@@ -35,7 +35,7 @@ export function MoldingsPanel(): TemplateResult {
     <div class="section-title" style="margin-top:16px">Rosettes d'angle</div>
     <ul class="panel-list">
       ${project.rosettes.length === 0
-        ? html`<li style="color:var(--text-muted)">Aucune rosette</li>`
+        ? html`<li class="empty-hint"><strong>Aucune rosette</strong>Les rosettes habillent les angles<br>de rencontre des cadres.</li>`
         : project.rosettes.map(r => html`
           <li>
             <span>${r.name}</span>

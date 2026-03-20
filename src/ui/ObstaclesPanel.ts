@@ -18,7 +18,7 @@ export function ObstaclesPanel(): TemplateResult {
     <div class="section-title">Obstacles</div>
     <ul class="panel-list">
       ${wall.obstacles.length === 0
-        ? html`<li style="color:var(--text-muted)">Aucun obstacle</li>`
+        ? html`<li class="empty-hint"><strong>Aucun obstacle</strong>Ajoutez portes, fenêtres, radiateurs…<br>pour les exclure du calcul de cadres.</li>`
         : wall.obstacles.map(o => html`
           <li>
             <span>${OBSTACLE_ICONS[o.type]} ${o.name}</span>

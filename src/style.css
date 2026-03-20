@@ -97,8 +97,18 @@
            opacity-0 pointer-events-none;
     z-index: 1000;
     transition: opacity 0.2s, transform 0.2s;
-    &.app-toast--visible { @apply opacity-100 translate-y-0; }
+    &.app-toast--visible { @apply opacity-100 translate-y-0; pointer-events: auto; }
     &.app-toast--error   { @apply border-danger text-danger; }
+  }
+  .toast-action {
+    margin-left: 12px;
+    background: transparent;
+    border: 1px solid currentColor;
+    color: inherit;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
   }
 
   /* Modal */

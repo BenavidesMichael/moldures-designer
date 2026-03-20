@@ -2,7 +2,8 @@ import { produce } from 'immer'
 import { html, render } from 'lit-html'
 import type { TemplateResult } from 'lit-html'
 import { nanoid } from 'nanoid'
-import { getProject, setState } from '../state/AppState.js'
+import { getProject, setState, undo } from '../state/AppState.js'
+import { showToast } from './toast.js'
 import type { Molding, Rosette } from '../types/index.js'
 
 export function MoldingsPanel(): TemplateResult {
@@ -20,10 +21,11 @@ export function MoldingsPanel(): TemplateResult {
             <div class="actions">
               <button @click=${() => showMoldingModal(m)}>✏️</button>
               <button class="danger" @click=${() => {
-                if (!confirm('Supprimer cette moulure ?')) return
+                const moldingName = m.name
                 setState(s => produce(s, draft => {
                   draft.project.moldings = draft.project.moldings.filter(x => x.id !== m.id)
                 }))
+                showToast(`Moulure "${moldingName}" supprimée`, 'success', { label: 'Annuler', onClick: undo })
               }}>🗑️</button>
             </div>
           </li>`)}
@@ -39,13 +41,17 @@ export function MoldingsPanel(): TemplateResult {
             <span>${r.name}</span>
             <small style="color:var(--text-muted)">${r.size}cm · ${r.pricePerPiece}€/pce</small>
             <div class="actions">
-              <button class="danger" @click=${() => setState(s => produce(s, draft => {
-                draft.project.rosettes = draft.project.rosettes.filter(x => x.id !== r.id)
-              }))}>🗑️</button>
+              <button class="danger" @click=${() => {
+                const rosetteName = r.name
+                setState(s => produce(s, draft => {
+                  draft.project.rosettes = draft.project.rosettes.filter(x => x.id !== r.id)
+                }))
+                showToast(`Rosette "${rosetteName}" supprimée`, 'success', { label: 'Annuler', onClick: undo })
+              }}>🗑️</button>
             </div>
           </li>`)}
     </ul>
-    <button style="width:100%;margin-top:6px" @click=${addRosette}>+ Ajouter rosette</button>
+    <button style="width:100%;margin-top:6px" @click=${showRosetteModal}>+ Ajouter rosette</button>
   `
 }
 
@@ -70,8 +76,11 @@ function moldingFormTpl(m?: Molding): TemplateResult {
 }
 
 function showMoldingModal(m?: Molding): void {
-  render(moldingFormTpl(m), document.getElementById('modal-content')!)
-  document.getElementById('app-modal')!.classList.remove('hidden')
+  const content = document.getElementById('modal-content')
+  const modal = document.getElementById('app-modal')
+  if (!content || !modal) return
+  render(moldingFormTpl(m), content)
+  modal.classList.remove('hidden')
 }
 
 function saveMolding(existingId?: string): void {
@@ -90,15 +99,57 @@ function saveMolding(existingId?: string): void {
     if (idx >= 0) draft.project.moldings[idx] = molding
     else          draft.project.moldings.push(molding)
   }))
-  document.getElementById('app-modal')!.classList.add('hidden')
+  const modal = document.getElementById('app-modal')
+  modal?.classList.add('hidden')
 }
 
-function addRosette(): void {
-  const name = prompt('Nom de la rosette :'); if (!name) return
-  const sizeStr  = prompt('Taille (cm) :', '20.5');  if (sizeStr === null) return
-  const priceStr = prompt('Prix/pièce (€) :', '9.68'); if (priceStr === null) return
-  const size  = Number(sizeStr)
-  const price = Number(priceStr)
-  const r: Rosette = { id: nanoid(), name, reference: '', size, pricePerPiece: price }
-  setState(s => produce(s, draft => { draft.project.rosettes.push(r) }))
+/** @internal — exported for tests only */
+export function showRosetteModal(): void {
+  let rosName  = ''
+  let rosSize  = 20.5
+  let rosPrice = 9.68
+
+  const submit = () => {
+    if (!rosName.trim() || rosSize <= 0) return
+    const r: Rosette = {
+      id: nanoid(),
+      name: rosName.trim(),
+      reference: '',
+      size: rosSize,
+      pricePerPiece: rosPrice,
+    }
+    setState(s => produce(s, draft => { draft.project.rosettes.push(r) }))
+    document.getElementById('app-modal')?.classList.add('hidden')
+  }
+
+  const content = document.getElementById('modal-content')
+  const modal = document.getElementById('app-modal')
+  if (!content || !modal) return
+
+  const renderTpl = () => render(html`
+    <div style="min-width:240px">
+      <h3 style="margin-bottom:12px">Nouvelle rosette</h3>
+      <div class="field">
+        <label>Nom</label>
+        <input id="ros-name" type="text" .value=${rosName}
+               @input=${(e: Event) => { rosName = (e.target as HTMLInputElement).value; renderTpl() }} />
+      </div>
+      <div class="field">
+        <label>Taille (cm)</label>
+        <input id="ros-size" type="number" .value=${String(rosSize)} min="0.1" step="0.5"
+               @input=${(e: Event) => { rosSize = Number((e.target as HTMLInputElement).value); renderTpl() }} />
+      </div>
+      <div class="field">
+        <label>Prix/pièce (€)</label>
+        <input id="ros-price" type="number" .value=${String(rosPrice)} min="0" step="0.01"
+               @input=${(e: Event) => { rosPrice = Number((e.target as HTMLInputElement).value); renderTpl() }} />
+      </div>
+      <button id="ros-save" class="primary" style="width:100%;margin-top:10px"
+              ?disabled=${!rosName.trim() || rosSize <= 0}
+              @click=${submit}>Enregistrer</button>
+    </div>
+  `, content)
+
+  renderTpl()
+  modal.classList.remove('hidden')
 }

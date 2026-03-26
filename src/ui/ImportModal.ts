@@ -15,7 +15,7 @@ export function showImportModal(onExtracted: (data: Partial<Molding>) => void): 
   const content = document.getElementById('modal-content')
   if (!modal || !content) return
 
-  const renderTpl = (): void => render(html`
+  const renderTpl = () => render(html`
     <div style="min-width:300px">
       <h3 style="margin-bottom:12px">⬇ Importer depuis fiche produit</h3>
 

@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { produce } from 'immer'
 
 vi.mock('../state/AppState.js', () => ({
   getState: vi.fn(() => ({ geminiApiKey: 'key-test', geminiModel: 'gemini-flash' })),
@@ -9,7 +8,7 @@ vi.mock('../state/storage.js', () => ({ saveGeminiKey: vi.fn() }))
 vi.mock('./toast.js', () => ({ showToast: vi.fn() }))
 
 import { showSettingsModal } from './SettingsModal.js'
-import { getState, setState } from '../state/AppState.js'
+import { setState } from '../state/AppState.js'
 import { saveGeminiKey } from '../state/storage.js'
 import { showToast } from './toast.js'
 
@@ -49,7 +48,7 @@ describe('showSettingsModal', () => {
     expect(setState).toHaveBeenCalledOnce()
     // Verify the updater writes the correct payload
     const [updaterFn] = vi.mocked(setState).mock.calls[0]
-    const prev = { geminiApiKey: '', geminiModel: 'gemini-flash' as 'gemini-flash' | 'imagen-4' }
+    const prev = { geminiApiKey: '', geminiModel: 'gemini-flash' as 'gemini-flash' | 'imagen-4', project: {} as any }
     expect(updaterFn(prev)).toMatchObject({ geminiApiKey: 'new-key-456', geminiModel: 'imagen-4' })
     expect(showToast).toHaveBeenCalledWith(expect.stringContaining('sauvegardés'))
   })

@@ -1,3 +1,6 @@
+# Override global gitignore — keep CI/CD workflow
+!.github/
+
 # Logs
 logs
 *.log

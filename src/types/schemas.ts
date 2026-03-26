@@ -45,23 +45,58 @@ const ObstacleSchema = z.object({
     transparent: z.boolean(),
     fillColor:   z.string().optional(),
     texture:     z.enum(['wood', 'glass', 'brick', 'metal']).optional(),
+    visible:     z.boolean().optional(),
   }),
 })
 
-const WallSchema = z.object({
-  id:                  z.string(),
-  name:                z.string().max(100),
-  dimensions:          z.object({ width: z.number().min(1), height: z.number().min(1), plinthHeight: z.number().min(0) }),
-  zoneMode:            z.enum(['1zone', '2zones']),
-  zones:               z.array(ZoneSchema),
-  separator:           z.object({ positionPercent: z.number().min(0).max(100), visible: z.boolean(), moldingId: z.string() }).optional(),
-  archivedBottomZone:  ZoneSchema.optional(),
-  obstacles:           z.array(ObstacleSchema),
-  colors:              z.object({ wall: z.string(), moldings: z.string(), plinth: z.string() }),
-  showAnnotations:     z.boolean(),
+const AnnotationFlagsSchema = z.object({
+  wallDimensions:  z.boolean().default(true),
+  frameDimensions: z.boolean().default(true),
+  spaces:          z.boolean().default(true),
+  obstacles:       z.boolean().default(true),
+  plinth:          z.boolean().default(true),
 })
 
-const MoldingSchema = z.object({
+const DEFAULT_ANNOTATIONS = {
+  wallDimensions: true, frameDimensions: true,
+  spaces: true, obstacles: true, plinth: true,
+}
+
+// Migration: old saves have `showAnnotations: boolean` instead of `annotations`
+const WallSchema = z.preprocess(
+  (raw) => {
+    if (raw && typeof raw === 'object') {
+      const r = raw as Record<string, unknown>
+      if ('showAnnotations' in r && !('annotations' in r)) {
+        const show = Boolean(r['showAnnotations'])
+        return {
+          ...r,
+          annotations: {
+            wallDimensions: show, frameDimensions: show,
+            spaces: show, obstacles: show, plinth: show,
+          },
+        }
+      }
+    }
+    return raw
+  },
+  z.object({
+    id:                  z.string(),
+    name:                z.string().max(100),
+    dimensions:          z.object({ width: z.number().min(1), height: z.number().min(1), plinthHeight: z.number().min(0) }),
+    zoneMode:            z.enum(['1zone', '2zones']),
+    zones:               z.array(ZoneSchema),
+    separator:           z.object({ positionPercent: z.number().min(0).max(100), visible: z.boolean(), moldingId: z.string() }).optional(),
+    archivedBottomZone:  ZoneSchema.optional(),
+    obstacles:           z.array(ObstacleSchema),
+    colors:              z.object({ wall: z.string(), moldings: z.string(), plinth: z.string() }),
+    annotations:         AnnotationFlagsSchema.default(DEFAULT_ANNOTATIONS),
+  })
+)
+
+export const PURCHASE_URL_RE = /^https?:\/\//i
+
+export const MoldingSchema = z.object({
   id:            z.string(),
   name:          z.string().max(100),
   reference:     z.string().max(50),
@@ -70,6 +105,10 @@ const MoldingSchema = z.object({
   barLength:     z.number().min(1),
   pricePerBar:   z.number().min(0),
   color:         z.string(),
+  material:      z.enum(['wood', 'mdf', 'pvc', 'polystyrene', 'polyurethane', 'other']).optional(),
+  purchaseUrl:   z.string().url().refine(u => PURCHASE_URL_RE.test(u), {
+    message: 'URL must start with https:// or http://',
+  }).optional(),
 })
 
 const RosetteSchema = z.object({

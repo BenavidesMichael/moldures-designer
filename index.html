@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
+  <meta name="theme-color" content="#f3efe8" />
   <title>Moldures Designer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="bg-bg text-text h-dvh overflow-hidden font-sans">
 
@@ -19,26 +22,28 @@
       <span id="project-name-display" class="text-muted text-sm italic truncate max-w-[180px]"></span>
       <div class="ml-auto flex gap-2 items-center">
         <button id="btn-add-wall" class="btn-sm">+ Mur</button>
-        <button id="btn-settings" class="btn-sm btn-icon" title="Paramètres IA">⚙</button>
+        <button id="btn-settings" class="btn-sm btn-icon" aria-label="Paramètres IA">⚙</button>
       </div>
     </header>
 
     <main class="flex flex-1 overflow-hidden">
 
       <div id="canvas-container"
-        class="flex-1 relative bg-canvas flex items-center justify-center">
+        class="flex-1 min-w-0 relative bg-canvas flex items-center justify-center">
         <canvas id="main-canvas" class="block"></canvas>
         <div id="canvas-overlay"
           class="hidden absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-3">
           <div class="spinner"></div>
-          <p class="text-sm" style="color:#a08060">Génération en cours…</p>
+          <p class="text-sm canvas-loading-text">Génération en cours…</p>
         </div>
       </div>
 
+      <div id="panel-resize-handle" title="Redimensionner le panneau"></div>
+
       <aside id="side-panel"
-        class="w-[300px] shrink-0 flex flex-col bg-surface border-l border-border">
-        <nav id="panel-tabs" class="flex border-b border-border">
-          <button class="tab-btn active" data-tab="project">
+        class="shrink-0 flex flex-col bg-surface border-l border-border" style="width:300px">
+        <nav id="panel-tabs" class="flex border-b border-border" role="tablist" aria-label="Panneaux de configuration">
+          <button class="tab-btn active" data-tab="project" role="tab" aria-selected="true" aria-controls="panel-content">
             <span class="tab-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>
@@ -46,36 +51,36 @@
             </span>
             <span class="tab-label">Projet</span>
           </button>
-          <button class="tab-btn" data-tab="wall">
+          <button class="tab-btn" data-tab="wall" role="tab" aria-selected="false" aria-controls="panel-content">
             <span class="tab-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="3" y="3" width="18" height="18" rx="1"/>
                 <path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>
               </svg>
             </span>
             <span class="tab-label">Mur</span>
           </button>
-          <button class="tab-btn" data-tab="frames">
+          <button class="tab-btn" data-tab="frames" role="tab" aria-selected="false" aria-controls="panel-content">
             <span class="tab-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="2" y="2" width="20" height="20" rx="2"/>
                 <rect x="7" y="7" width="10" height="10" rx="1"/>
               </svg>
             </span>
             <span class="tab-label">Cadres</span>
           </button>
-          <button class="tab-btn" data-tab="obstacles">
+          <button class="tab-btn" data-tab="obstacles" role="tab" aria-selected="false" aria-controls="panel-content">
             <span class="tab-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="3" y="3" width="18" height="18" rx="2"/>
                 <path d="M9 3v18M3 9h6M3 15h6"/>
               </svg>
             </span>
             <span class="tab-label">Obstacles</span>
           </button>
-          <button class="tab-btn" data-tab="moldings">
+          <button class="tab-btn" data-tab="moldings" role="tab" aria-selected="false" aria-controls="panel-content">
             <span class="tab-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                 <path d="M2 17l10 5 10-5"/>
                 <path d="M2 12l10 5 10-5"/>
@@ -83,9 +88,9 @@
             </span>
             <span class="tab-label">Moulures</span>
           </button>
-          <button class="tab-btn" data-tab="budget">
+          <button class="tab-btn" data-tab="budget" role="tab" aria-selected="false" aria-controls="panel-content">
             <span class="tab-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="2" y="5" width="20" height="14" rx="2"/>
                 <path d="M16 10h.01M12 10h.01M8 10h.01M16 14h.01M12 14h.01M8 14h.01"/>
               </svg>
@@ -93,7 +98,7 @@
             <span class="tab-label">Budget</span>
           </button>
         </nav>
-        <div id="panel-content" class="flex-1 overflow-y-auto p-3"></div>
+        <div id="panel-content" class="flex-1 overflow-y-auto p-3" role="tabpanel" aria-live="polite"></div>
       </aside>
 
     </main>
@@ -103,7 +108,7 @@
       <button id="btn-pdf">PDF — Mur actif</button>
       <button id="btn-pdf-all">PDF — Tous les murs</button>
       <span class="toolbar-sep"></span>
-      <button id="btn-gemini" class="btn-gemini">✦ Gemini</button>
+      <button id="btn-gemini" class="btn-gemini"><span aria-hidden="true">✦</span> Gemini</button>
       <div class="ml-auto flex gap-1.5">
         <button id="btn-save" class="primary">Sauvegarder</button>
         <label class="btn" for="btn-import">Charger</label>
@@ -117,9 +122,9 @@
   <div id="app-toast" class="app-toast"></div>
 
   <!-- Modal (hidden/visible géré par classList en JS) -->
-  <div id="app-modal" class="app-modal hidden">
+  <div id="app-modal" class="app-modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="app-modal__inner">
-      <button id="modal-close">✕</button>
+      <button id="modal-close" aria-label="Fermer"><span aria-hidden="true">✕</span></button>
       <div id="modal-content"></div>
     </div>
   </div>

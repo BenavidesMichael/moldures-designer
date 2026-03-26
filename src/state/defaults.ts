@@ -67,7 +67,7 @@ export function makeDefaultProject(): Project {
       }],
       obstacles: [],
       colors: { wall: '#f5f0e8', moldings: '', plinth: '#ffffff' },
-      showAnnotations: true,
+      annotations: { wallDimensions: true, frameDimensions: true, spaces: true, obstacles: true, plinth: true },
     }],
   }
 }

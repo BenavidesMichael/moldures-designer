@@ -10,27 +10,60 @@ const OBSTACLE_ICONS: Record<ObstacleType, string> = {
   outlet: '🔌', switch: '💡', fireplace: '🔥', custom: '📦',
 }
 
+function toggleObstacleVisible(obstacleId: string): void {
+  setState(s => produce(s, draft => {
+    const w = draft.project.walls.find(w => w.id === draft.project.activeWallId)
+    if (!w) return
+    const o = w.obstacles.find(x => x.id === obstacleId)
+    if (!o) return
+    o.display.visible = o.display.visible === false ? true : false
+  }))
+}
+
+function toggleAllObstacles(visible: boolean): void {
+  setState(s => produce(s, draft => {
+    const w = draft.project.walls.find(w => w.id === draft.project.activeWallId)
+    if (!w) return
+    for (const o of w.obstacles) o.display.visible = visible
+  }))
+}
+
 export function ObstaclesPanel(): TemplateResult {
   const wall = getActiveWall()
   if (!wall) return html`<p>Aucun mur.</p>`
 
+  const allVisible  = wall.obstacles.every(o => o.display.visible !== false)
+  const someVisible = wall.obstacles.some(o => o.display.visible !== false)
+
   return html`
     <div class="section-title">Obstacles</div>
+    ${wall.obstacles.length > 0 ? html`
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <button style="flex:1;font-size:0.75rem" @click=${() => toggleAllObstacles(true)}
+                ?disabled=${allVisible}>👁 Tout afficher</button>
+        <button style="flex:1;font-size:0.75rem" @click=${() => toggleAllObstacles(false)}
+                ?disabled=${!someVisible}>🚫 Tout masquer</button>
+      </div>` : ''}
     <ul class="panel-list">
       ${wall.obstacles.length === 0
         ? html`<li class="empty-hint"><strong>Aucun obstacle</strong>Ajoutez portes, fenêtres, radiateurs…<br>pour les exclure du calcul de cadres.</li>`
-        : wall.obstacles.map(o => html`
-          <li>
-            <span>${OBSTACLE_ICONS[o.type]} ${o.name}</span>
-            <small style="color:var(--text-muted)">${o.width}×${o.height}cm @ (${o.positionX}, ${o.positionY})</small>
-            <div class="actions">
-              <button @click=${() => showObstacleModal(o)}>✏️</button>
-              <button class="danger" @click=${() => setState(s => produce(s, draft => {
-                const w = draft.project.walls.find(w => w.id === draft.project.activeWallId)
-                if (w) w.obstacles = w.obstacles.filter(x => x.id !== o.id)
-              }))}>🗑️</button>
-            </div>
-          </li>`)}
+        : wall.obstacles.map(o => {
+            const isVisible = o.display.visible !== false
+            return html`
+              <li style=${isVisible ? '' : 'opacity:0.45'}>
+                <span>${OBSTACLE_ICONS[o.type]} ${o.name}</span>
+                <small style="color:var(--text-muted)">${o.width}×${o.height}cm @ (${o.positionX}, ${o.positionY})</small>
+                <div class="actions">
+                  <button title=${isVisible ? 'Masquer' : 'Afficher'}
+                          @click=${() => toggleObstacleVisible(o.id)}>${isVisible ? '👁' : '🚫'}</button>
+                  <button @click=${() => showObstacleModal(o)}>✏️</button>
+                  <button class="danger" @click=${() => setState(s => produce(s, draft => {
+                    const w = draft.project.walls.find(w => w.id === draft.project.activeWallId)
+                    if (w) w.obstacles = w.obstacles.filter(x => x.id !== o.id)
+                  }))}>🗑️</button>
+                </div>
+              </li>`
+          })}
     </ul>
     <button class="primary" style="width:100%;margin-top:6px" @click=${() => showObstacleModal()}>+ Ajouter obstacle</button>
   `

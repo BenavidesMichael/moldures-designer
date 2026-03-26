@@ -32,7 +32,7 @@ function makeWall(width = 200, height = 100, plinth = 10): Wall {
     }],
     obstacles: [], separator: undefined,
     colors: { wall: '#fff', moldings: '', plinth: '#fff' },
-    showAnnotations: false,
+    annotations: { wallDimensions: false, frameDimensions: false, spaces: false, obstacles: false, plinth: false },
   }
 }
 

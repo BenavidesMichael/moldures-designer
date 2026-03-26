@@ -1,9 +1,12 @@
-import type { Wall, Project } from '../types/index.js'
+import { produce } from 'immer'
+import type { Wall, Project, AnnotationFlags } from '../types/index.js'
+export type { AnnotationFlags }
 import { computeScale, wallOffset } from './scale.js'
 import { drawWall }        from './drawWall.js'
 import { drawFrames }      from './drawFrames.js'
 import { drawObstacles }   from './drawObstacles.js'
 import { drawAnnotations } from './drawAnnotations.js'
+import { setState }        from '../state/AppState.js'
 
 export interface RenderContext {
   ctx: CanvasRenderingContext2D
@@ -14,11 +17,19 @@ export interface RenderContext {
   project: Project
 }
 
-// ── Camera (zoom — local to Renderer, not saved/undoable) ────────────────────
+// ── Camera (zoom — local to Renderer, not saved/undoable) ───────────────────
 const _camera = { zoom: 1 }
 let _lastCanvas:  HTMLCanvasElement | null = null
 let _lastWall:    Wall | null = null
 let _lastProject: Project | null = null
+
+// ── Drag state (obstacle drag — not saved until mouseup) ────────────────────
+interface DragState {
+  obstacleId: string
+  offsetXcm: number   // cursor offset from obstacle left edge at grab
+  offsetYcm: number   // cursor offset from obstacle top edge (canvas coords) at grab
+}
+let _drag: DragState | null = null
 
 /** Reset zoom when switching to a new wall. */
 export function resetZoom(): void {
@@ -36,6 +47,173 @@ export function initZoom(canvas: HTMLCanvasElement): () => void {
   }
   canvas.addEventListener('wheel', handler, { passive: false })
   return () => canvas.removeEventListener('wheel', handler)
+}
+
+/**
+ * Wire obstacle drag-and-drop on the canvas. Call once after boot().
+ * Returns a cleanup function.
+ */
+export function initDrag(canvas: HTMLCanvasElement): () => void {
+  function getMetrics(): { scale: number; ox: number; oy: number; cssW: number; cssH: number } | null {
+    if (!_lastWall) return null
+    const cssW = parseFloat(canvas.style.width)  || canvas.width
+    const cssH = parseFloat(canvas.style.height) || canvas.height
+    const scale = computeScale(
+      { width: _lastWall.dimensions.width, height: _lastWall.dimensions.height },
+      { width: cssW, height: cssH }
+    )
+    const { ox, oy } = wallOffset(
+      { width: _lastWall.dimensions.width, height: _lastWall.dimensions.height },
+      { width: cssW, height: cssH },
+      scale
+    )
+    return { scale, ox, oy, cssW, cssH }
+  }
+
+  /** Convert a CSS-pixel point on the canvas to wall cm coordinates (Y = from top). */
+  function pixToCmTop(px: number, py: number): { xCm: number; yTopCm: number } | null {
+    const m = getMetrics()
+    if (!m) return null
+    const cx = m.cssW / 2
+    const cy = m.cssH / 2
+    // Undo zoom: ctx.translate(cx,cy) → ctx.scale(zoom) → ctx.translate(-cx,-cy)
+    const wx = (px - cx) / _camera.zoom + cx - m.ox
+    const wy = (py - cy) / _camera.zoom + cy - m.oy
+    return { xCm: wx / m.scale, yTopCm: wy / m.scale }
+  }
+
+  function onMouseDown(e: MouseEvent): void {
+    if (!_lastWall) return
+    const rect = canvas.getBoundingClientRect()
+    const mx = e.clientX - rect.left
+    const my = e.clientY - rect.top
+    const pos = pixToCmTop(mx, my)
+    if (!pos) return
+    const { xCm, yTopCm } = pos
+    const wh = _lastWall.dimensions.height
+
+    // Find topmost obstacle (drawn last = transparent, so reverse order)
+    for (let i = _lastWall.obstacles.length - 1; i >= 0; i--) {
+      const o = _lastWall.obstacles[i]
+      if (o.display.visible === false) continue
+      // positionY is from floor; convert to from-top
+      const oTopCm = wh - o.positionY - o.height
+      if (
+        xCm >= o.positionX && xCm <= o.positionX + o.width &&
+        yTopCm >= oTopCm   && yTopCm <= oTopCm + o.height
+      ) {
+        _drag = {
+          obstacleId: o.id,
+          offsetXcm:  xCm - o.positionX,
+          offsetYcm:  yTopCm - oTopCm,
+        }
+        canvas.style.cursor = 'grabbing'
+        break
+      }
+    }
+  }
+
+  function onMouseMove(e: MouseEvent): void {
+    if (!_drag || !_lastWall || !_lastCanvas || !_lastProject) return
+    const rect = canvas.getBoundingClientRect()
+    const pos  = pixToCmTop(e.clientX - rect.left, e.clientY - rect.top)
+    if (!pos) return
+
+    const obs = _lastWall.obstacles.find(o => o.id === _drag!.obstacleId)
+    if (!obs) return
+
+    const ww = _lastWall.dimensions.width
+    const wh = _lastWall.dimensions.height
+    const newXcm = Math.max(0, Math.min(ww - obs.width,  pos.xCm   - _drag.offsetXcm))
+    const newYtop = Math.max(0, Math.min(wh - obs.height, pos.yTopCm - _drag.offsetYcm))
+    const newYfloor = wh - newYtop - obs.height
+
+    // Build a temporary wall with the moved obstacle for live preview
+    const previewWall: Wall = produce(_lastWall, draft => {
+      const o = draft.obstacles.find(x => x.id === _drag!.obstacleId)
+      if (o) { o.positionX = Math.round(newXcm); o.positionY = Math.round(newYfloor) }
+    })
+    // Render preview directly (no setState → no history entry)
+    _lastWall = previewWall
+    renderWithState(_lastCanvas, previewWall, _lastProject)
+  }
+
+  function onMouseUp(e: MouseEvent): void {
+    if (!_drag || !_lastWall) { _drag = null; canvas.style.cursor = ''; return }
+    const rect = canvas.getBoundingClientRect()
+    const pos  = pixToCmTop(e.clientX - rect.left, e.clientY - rect.top)
+
+    if (pos) {
+      const obs = _lastWall.obstacles.find(o => o.id === _drag!.obstacleId)
+      if (obs) {
+        const ww = _lastWall.dimensions.width
+        const wh = _lastWall.dimensions.height
+        const newXcm   = Math.max(0, Math.min(ww - obs.width,  pos.xCm   - _drag!.offsetXcm))
+        const newYtop  = Math.max(0, Math.min(wh - obs.height, pos.yTopCm - _drag!.offsetYcm))
+        const newYfloor = wh - newYtop - obs.height
+        const finalX = Math.round(newXcm)
+        const finalY = Math.round(newYfloor)
+
+        // Commit to state (creates undo entry)
+        setState(s => produce(s, draft => {
+          const w = draft.project.walls.find(w => w.id === draft.project.activeWallId)
+          if (!w) return
+          const o = w.obstacles.find(x => x.id === _drag!.obstacleId)
+          if (o) { o.positionX = finalX; o.positionY = finalY }
+        }))
+      }
+    }
+    _drag = null
+    canvas.style.cursor = ''
+  }
+
+  function onMouseLeave(): void {
+    if (_drag && _lastWall && _lastCanvas && _lastProject) {
+      // Commit current position on mouse leave
+      setState(s => produce(s, draft => {
+        const w = draft.project.walls.find(w => w.id === draft.project.activeWallId)
+        if (!w || !_drag) return
+        const obs = _lastWall!.obstacles.find(o => o.id === _drag!.obstacleId)
+        if (!obs) return
+        const o = w.obstacles.find(x => x.id === _drag!.obstacleId)
+        if (o) { o.positionX = obs.positionX; o.positionY = obs.positionY }
+      }))
+    }
+    _drag = null
+    canvas.style.cursor = ''
+  }
+
+  // Hover cursor feedback
+  function onMouseMoveHover(e: MouseEvent): void {
+    if (_drag) return
+    if (!_lastWall) return
+    const rect = canvas.getBoundingClientRect()
+    const pos  = pixToCmTop(e.clientX - rect.left, e.clientY - rect.top)
+    if (!pos) { canvas.style.cursor = ''; return }
+    const { xCm, yTopCm } = pos
+    const wh = _lastWall.dimensions.height
+    const hit = _lastWall.obstacles.some(o => {
+      if (o.display.visible === false) return false
+      const oTopCm = wh - o.positionY - o.height
+      return xCm >= o.positionX && xCm <= o.positionX + o.width
+          && yTopCm >= oTopCm   && yTopCm <= oTopCm + o.height
+    })
+    canvas.style.cursor = hit ? 'grab' : ''
+  }
+
+  canvas.addEventListener('mousedown',  onMouseDown)
+  canvas.addEventListener('mousemove',  onMouseMove)
+  canvas.addEventListener('mousemove',  onMouseMoveHover)
+  canvas.addEventListener('mouseup',    onMouseUp)
+  canvas.addEventListener('mouseleave', onMouseLeave)
+
+  return () => {
+    canvas.removeEventListener('mousedown',  onMouseDown)
+    canvas.removeEventListener('mousemove',  onMouseMove)
+    canvas.removeEventListener('mousemove',  onMouseMoveHover)
+    canvas.removeEventListener('mouseup',    onMouseUp)
+    canvas.removeEventListener('mouseleave', onMouseLeave)
+  }
 }
 
 export function setupCanvas(canvas: HTMLCanvasElement, container: HTMLElement): void {
@@ -60,7 +238,6 @@ export function renderToCanvas(canvas: HTMLCanvasElement, wall: Wall, project: P
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  // style.width/height set by setupCanvas (HiDPI); fallback = physical size for off-screen canvases
   const cssW = parseFloat(canvas.style.width)  || canvas.width
   const cssH = parseFloat(canvas.style.height) || canvas.height
 
@@ -81,7 +258,7 @@ export function renderToCanvas(canvas: HTMLCanvasElement, wall: Wall, project: P
   drawObstacles(rc, false)
   drawFrames(rc)
   drawObstacles(rc, true)
-  if (wall.showAnnotations) drawAnnotations(rc)
+  drawAnnotations(rc, wall.annotations)
 }
 
 /**
@@ -96,7 +273,6 @@ export function renderWithState(canvas: HTMLCanvasElement, wall: Wall, project: 
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
-  // style.width/height set by setupCanvas (HiDPI); fallback = physical size for off-screen canvases
   const cssW = parseFloat(canvas.style.width)  || canvas.width
   const cssH = parseFloat(canvas.style.height) || canvas.height
 
@@ -125,7 +301,7 @@ export function renderWithState(canvas: HTMLCanvasElement, wall: Wall, project: 
   drawObstacles(rc, false) // opaque obstacles
   drawFrames(rc)
   drawObstacles(rc, true)  // transparent obstacles on top
-  if (wall.showAnnotations) drawAnnotations(rc)
+  drawAnnotations(rc, wall.annotations)
 
   ctx.restore()
 }

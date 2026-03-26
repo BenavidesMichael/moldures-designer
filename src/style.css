@@ -15,6 +15,7 @@
   --color-accent-hover: #9a5e1f;
   --color-danger:       #b83232;
   --color-canvas:       #141210;
+  --color-zone-bottom:  #7c4dab;
 }
 
 /* ── Aliases compatibilité pour les styles inline dans les templates TS ─────── */
@@ -22,6 +23,7 @@
   :root {
     --text-muted: var(--color-muted);
     --accent:     var(--color-accent);
+    color-scheme: light;
   }
 }
 
@@ -163,7 +165,8 @@
   input[type="password"],
   select {
     @apply w-full px-2 py-1.5 bg-bg border border-border rounded text-text text-sm;
-    &:focus { @apply outline-none border-accent; box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 15%, transparent); }
+    &:focus { border-color: var(--color-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 15%, transparent); outline: none; }
+    &:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
   }
   input[type="color"]    { @apply w-9 h-7 p-0.5 border border-border rounded cursor-pointer; }
   input[type="range"]    { @apply w-full; accent-color: var(--color-accent); }
@@ -205,6 +208,16 @@
     animation: spin 0.9s ease-in-out infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Respect prefers-reduced-motion ── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+    .spinner { animation: none; opacity: 0.6; }
+  }
 
   /* ── Toast ── */
   .app-toast {
@@ -257,6 +270,7 @@
     justify-content: center;
     z-index: 500;
     backdrop-filter: blur(2px);
+    overscroll-behavior: contain;
     &.hidden { display: none; }
   }
   .app-modal__inner {
@@ -288,7 +302,7 @@
   /* ── Tableaux ── */
   table { @apply w-full border-collapse text-xs; }
   th    { @apply text-left px-1.5 py-1.5 border-b border-border font-semibold; color: var(--color-muted); letter-spacing: 0.04em; text-transform: uppercase; font-size: 9.5px; }
-  td    { @apply px-1.5 py-1.5; border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent); }
+  td    { @apply px-1.5 py-1.5; border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent); font-variant-numeric: tabular-nums; }
 
   /* ── Badges ── */
   .badge-restored  { background: color-mix(in srgb, #16a34a 12%, transparent); color: #15803d; @apply px-2 py-0.5 rounded text-xs font-medium; }
@@ -296,11 +310,68 @@
 
   /* ── Zones de séparateur ── */
   .zone-top    { border-left: 3px solid var(--color-accent); padding-left: 8px; }
-  .zone-bottom { border-left: 3px solid #7c4dab; padding-left: 8px; }
+  .zone-bottom { border-left: 3px solid var(--color-zone-bottom); padding-left: 8px; }
   .zone-title  { @apply text-sm font-semibold mb-2; }
+
+  /* ── Cartes de cadre (FramesPanel) ── */
+  .frame-card {
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .frame-card > summary {
+    padding: 6px 10px;
+    background: color-mix(in srgb, var(--color-surface) 70%, var(--color-bg));
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    list-style: none;
+    user-select: none;
+    &:hover { background: var(--color-border); }
+    &::-webkit-details-marker { display: none; }
+  }
+  .frame-card-chevron {
+    font-size: 0.55rem;
+    color: var(--color-muted);
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+  details[open].frame-card > summary .frame-card-chevron {
+    transform: rotate(90deg);
+  }
+  .frame-card__body {
+    padding: 8px 10px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg);
+  }
+  /* Niveaux imbriqués dans un cadre */
+  .nested-section {
+    margin-top: 8px;
+    border-top: 1px dashed var(--color-border);
+    padding-top: 6px;
+  }
+  .nested-level-row {
+    margin-left: 8px;
+    padding-left: 8px;
+    border-left: 2px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+    margin-top: 5px;
+    padding-top: 4px;
+  }
 
   /* ── Canvas container ── */
   .bg-canvas { background: var(--color-canvas); }
+  .canvas-loading-text { color: #a08060; }
+
+  /* ── Headings dans les modaux ── */
+  .app-modal__inner h3 {
+    text-wrap: balance;
+    font-weight: 600;
+    font-size: 1rem;
+  }
 
   /* ── État vide (empty state) ── */
   .empty-hint {
@@ -317,4 +388,72 @@
     color: color-mix(in srgb, var(--color-muted) 80%, var(--color-text));
     margin-bottom: 4px;
   }
+}
+
+/* ── Panel resize handle ───────────────────────────────────────────────── */
+#panel-resize-handle {
+  flex-shrink: 0;
+  width: 5px;
+  cursor: ew-resize;
+  transition: background 0.15s;
+  /* No z-index needed — it's a flex sibling, never covered */
+}
+#panel-resize-handle:hover {
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+#panel-resize-handle.is-resizing {
+  background: color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+
+/* ── Material Advisor ──────────────────────────────────────────────────── */
+.material-advisor {
+  margin: 6px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+.material-advisor__summary {
+  padding: 6px 10px;
+  cursor: pointer;
+  font-weight: 600;
+  user-select: none;
+}
+.material-advisor__body {
+  padding: 6px 10px 10px;
+}
+.material-advisor__list {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+}
+.material-advisor__list li {
+  margin: 2px 0;
+}
+.material-advisor__meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* ── Google Profile ────────────────────────────────────────────────────── */
+.google-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0 12px;
+}
+.google-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+.google-profile__name { font-weight: 600; font-size: 0.9rem; }
+.google-profile__email { font-size: 0.78rem; color: var(--text-muted); }
+.settings-separator {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin: 8px 0;
 }

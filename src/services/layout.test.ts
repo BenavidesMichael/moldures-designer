@@ -88,7 +88,7 @@ describe('computeZoneRect', () => {
     separator: { positionPercent: 60, visible: true, moldingId: 'm1' },
     obstacles: [],
     colors: { wall: '#fff', moldings: '', plinth: '#fff' },
-    showAnnotations: false,
+    annotations: { wallDimensions: false, frameDimensions: false, spaces: false, obstacles: false, plinth: false },
   }
 
   it('computes full zone rect in 1-zone mode', () => {

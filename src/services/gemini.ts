@@ -1,12 +1,16 @@
 import { GoogleGenAI } from '@google/genai'
-import type { Project, Wall } from '../types/index.js'
+import type { ExtractedMolding, Molding, Project, Wall } from '../types/index.js'
 
 export type GeminiModel = 'gemini-flash' | 'imagen-4'
 
-const MODEL_IDS: Record<GeminiModel, string> = {
-  'gemini-flash': 'gemini-2.0-flash-preview-image-generation',
-  'imagen-4':     'imagen-4.0-generate-001',
+// Model IDs for image generation (wall render feature)
+const IMAGE_MODEL_IDS: Record<GeminiModel, string> = {
+  'gemini-flash': 'gemini-2.5-flash-image',   // Nano Banana — fast, free tier
+  'imagen-4':     'imagen-4.0-generate-001',   // Imagen 4 — higher quality, paid
 }
+
+// Dedicated text model for extraction — lighter, faster, not user-configurable
+const TEXT_EXTRACTION_MODEL = 'gemini-2.5-flash'
 
 const TIMEOUT_MS = 30_000
 
@@ -32,16 +36,16 @@ export async function generateWallRender(
   try {
     const generate = model === 'imagen-4'
       ? generateWithImagen(ai, prompt)
-      : generateWithGeminiFlash(ai, prompt)
+      : generateWithGeminiFlash(ai, prompt, model)
     return await withTimeout(generate, TIMEOUT_MS)
   } catch (err) {
     throw translateError(err)
   }
 }
 
-async function generateWithGeminiFlash(ai: GoogleGenAI, prompt: string): Promise<string> {
+async function generateWithGeminiFlash(ai: GoogleGenAI, prompt: string, model: GeminiModel = 'gemini-flash'): Promise<string> {
   const response = await ai.models.generateContent({
-    model: MODEL_IDS['gemini-flash'],
+    model: IMAGE_MODEL_IDS[model],
     contents: [{ parts: [{ text: prompt }] }],
     config: { responseModalities: ['IMAGE', 'TEXT'] },
   })
@@ -53,7 +57,7 @@ async function generateWithGeminiFlash(ai: GoogleGenAI, prompt: string): Promise
 
 async function generateWithImagen(ai: GoogleGenAI, prompt: string): Promise<string> {
   const response = await ai.models.generateImages({
-    model: MODEL_IDS['imagen-4'],
+    model: IMAGE_MODEL_IDS['imagen-4'],
     prompt,
     config: { numberOfImages: 1, aspectRatio: '16:9', includeRaiReason: true },
   })
@@ -93,3 +97,64 @@ function translateError(err: unknown): GeminiError {
   return new GeminiError(`Erreur Gemini : ${msg}`)
 }
 // Note: GeminiError from withTimeout is caught by `err instanceof GeminiError` guard above and returned as-is.
+
+export async function extractMoldingFromText(
+  text: string,
+  apiKey: string,
+  url?: string,
+): Promise<Partial<Molding>> {
+  if (!apiKey) throw new GeminiError('Clé API manquante. Configurez-la dans ⚙️ Paramètres.')
+
+  const ai = new GoogleGenAI({ apiKey })
+  const prompt = buildExtractionPrompt(text)
+
+  let raw: string
+  try {
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: TEXT_EXTRACTION_MODEL, // gemini-2.5-flash — text only, not user-configurable
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
+      TIMEOUT_MS,
+    )
+    raw = response.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+  } catch (err) {
+    throw translateError(err)
+  }
+
+  // Strip markdown code fences if present (e.g. ```json ... ```)
+  const json = raw.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim()
+
+  let extracted: ExtractedMolding
+  try {
+    extracted = JSON.parse(json) as ExtractedMolding
+  } catch {
+    throw new GeminiError('Extraction échouée — réponse invalide de Gemini. Remplissez manuellement.')
+  }
+
+  // Strip null values — Partial<Molding> must not contain null keys
+  const result = Object.fromEntries(
+    Object.entries(extracted).filter(([, v]) => v !== null),
+  ) as Partial<Molding>
+
+  // Attach purchase URL if valid — immutable spread (never mutate result)
+  const HTTPS_RE = /^https?:\/\//i
+  return url && HTTPS_RE.test(url) ? { ...result, purchaseUrl: url } : result
+}
+
+function buildExtractionPrompt(text: string): string {
+  return `Tu es un expert en moulures décoratives. Extrais les informations suivantes depuis ce texte de fiche produit et retourne UNIQUEMENT un JSON valide, sans markdown, sans commentaires.
+
+Texte:"""
+${text}
+"""
+
+JSON attendu (null si champ non trouvé) :
+{"name":null,"material":null,"width":null,"thickness":null,"barLength":null,"pricePerBar":null,"reference":null}
+
+Règles :
+- material : exactement l'une de ces valeurs ou null : "wood", "mdf", "pvc", "polystyrene", "polyurethane", "other"
+- width, thickness : en mm (nombre)
+- barLength : en cm (nombre)
+- pricePerBar : en euros (nombre)`
+}

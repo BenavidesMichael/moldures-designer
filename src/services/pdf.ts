@@ -10,20 +10,24 @@ import { renderToCanvas } from '../renderer/Renderer.js'
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
- * Render the wall onto a dedicated off-screen canvas at 2× the display
- * resolution, then return a PNG data URL. Avoids blurry PDFs on Retina screens.
+ * Render the wall onto a dedicated off-screen canvas sized to the wall's own
+ * aspect ratio at a fixed resolution, then return a PNG data URL.
+ * Sizing by wall ratio (not canvas size) avoids stretch in the PDF.
  * Utilise renderToCanvas (pure) pour ne pas écraser _lastCanvas du renderer.
  */
-function getHighResDataUrl(canvas: HTMLCanvasElement, wall: Wall, project: Project): string {
-  const EXPORT_SCALE = 2
+function getHighResDataUrl(_canvas: HTMLCanvasElement, wall: Wall, project: Project): string {
+  const LONG_SIDE_PX = 1600  // target resolution for the longer dimension
+  const wallAspect   = wall.dimensions.width / wall.dimensions.height
+  const offW = wallAspect >= 1 ? LONG_SIDE_PX : Math.round(LONG_SIDE_PX * wallAspect)
+  const offH = wallAspect >= 1 ? Math.round(LONG_SIDE_PX / wallAspect) : LONG_SIDE_PX
+
   const off = document.createElement('canvas')
-  off.width  = canvas.clientWidth  * EXPORT_SCALE
-  off.height = canvas.clientHeight * EXPORT_SCALE
-  off.style.width  = canvas.clientWidth  + 'px'
-  off.style.height = canvas.clientHeight + 'px'
+  off.width  = offW
+  off.height = offH
+  off.style.width  = offW + 'px'
+  off.style.height = offH + 'px'
   const ctx = off.getContext('2d')
   if (!ctx) return ''
-  ctx.scale(EXPORT_SCALE, EXPORT_SCALE)
   renderToCanvas(off, wall, project)          // ← pure, pas de side-effects
   return off.toDataURL('image/png')
 }
@@ -75,10 +79,14 @@ function addWallPage(pdf: jsPDF, canvas: HTMLCanvasElement, project: Project, wa
   pdf.setFont('helvetica', 'normal')
   pdf.text(`Généré le ${date}`, pw - 10, 12, { align: 'right' })
 
-  // High-res canvas export (avoids blur on Retina/print)
-  const imgData = getHighResDataUrl(canvas, wall, project)
-  const imgW = pw * 0.55
-  const imgH = ph * 0.75
+  // High-res canvas export — size image to fit available slot while keeping wall aspect ratio
+  const imgData    = getHighResDataUrl(canvas, wall, project)
+  const wallAspect = wall.dimensions.width / wall.dimensions.height
+  const maxImgW    = pw * 0.55
+  const maxImgH    = ph * 0.75
+  let imgW = maxImgW
+  let imgH = imgW / wallAspect
+  if (imgH > maxImgH) { imgH = maxImgH; imgW = imgH * wallAspect }
   pdf.addImage(imgData, 'PNG', 10, 18, imgW, imgH)
 
   // Dimensions box (right side)

@@ -14,6 +14,15 @@ export interface Project {
   rosettes: Rosette[]
 }
 
+// ─── Annotations ───────────────────────────────────────────────────────────
+export interface AnnotationFlags {
+  wallDimensions:  boolean   // largeur/hauteur totale du mur
+  frameDimensions: boolean   // largeur/hauteur de chaque cadre
+  spaces:          boolean   // marges et gaps entre cadres
+  obstacles:       boolean   // positions/tailles des obstacles
+  plinth:          boolean   // hauteur de plinthe
+}
+
 // ─── Wall ──────────────────────────────────────────────────────────────────
 export interface Wall {
   id: string
@@ -25,7 +34,7 @@ export interface Wall {
   archivedBottomZone?: Zone
   obstacles: Obstacle[]
   colors: WallColors
-  showAnnotations: boolean
+  annotations: AnnotationFlags
 }
 
 export interface WallDimensions {
@@ -85,6 +94,37 @@ export interface Molding {
   barLength: number  // cm
   pricePerBar: number // €
   color: string      // hex
+  material?: MoldingMaterial          // NEW
+  purchaseUrl?: string                // NEW — https:// or http:// only
+}
+
+// ─── Molding material ───────────────────────────────────────────────────────
+export type MoldingMaterial =
+  | 'wood'
+  | 'mdf'
+  | 'pvc'
+  | 'polystyrene'
+  | 'polyurethane'
+  | 'other'
+
+export interface MaterialInfo {
+  label: string
+  icon: string
+  pros: string[]
+  notes: string[]
+  priceRange: string
+  idealFor: string
+}
+
+// Intermediate type returned by Gemini extraction (all fields nullable)
+export interface ExtractedMolding {
+  name: string | null
+  material: MoldingMaterial | null
+  width: number | null
+  thickness: number | null
+  barLength: number | null
+  pricePerBar: number | null
+  reference: string | null
 }
 
 export interface Rosette {
@@ -124,6 +164,7 @@ export interface ObstacleDisplay {
   transparent: boolean
   fillColor?: string
   texture?: ObstacleTexture
+  visible?: boolean   // undefined = true
 }
 
 // ─── Layout result (computed, not stored) ──────────────────────────────────

@@ -87,12 +87,33 @@ export function WallPanel() {
                @input=${(e: Event) => updateWall(w => { w.colors.plinth = (e.target as HTMLInputElement).value })} />
       </div>
     </div>
-    <div class="field mt-2">
-      <label>
-        <input type="checkbox" ?checked=${wall.showAnnotations}
-               @change=${(e: Event) => updateWall(w => { w.showAnnotations = (e.target as HTMLInputElement).checked })} />
-        Afficher les cotes
-      </label>
+    <div class="section-title">Cotes affichées</div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px">
+      <button style="font-size:0.72rem;padding:2px 6px"
+              @click=${() => updateWall(w => {
+                const all = Object.values(w.annotations).every(Boolean)
+                w.annotations = { wallDimensions: !all, frameDimensions: !all, spaces: !all, obstacles: !all, plinth: !all }
+              })}>
+        ${Object.values(wall.annotations).every(Boolean) ? '🚫 Tout masquer' : '👁 Tout afficher'}
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 8px">
+      ${(
+        [
+          ['wallDimensions',  '📐 Dimensions mur'],
+          ['frameDimensions', '🔲 Dimensions cadres'],
+          ['spaces',          '↔ Espaces / marges'],
+          ['obstacles',       '🧱 Obstacles'],
+          ['plinth',          '📏 Plinthe'],
+        ] as const
+      ).map(([key, label]) => html`
+        <label style="font-size:0.78rem;display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="checkbox" ?checked=${wall.annotations[key]}
+                 @change=${(e: Event) => updateWall(w => {
+                   w.annotations[key] = (e.target as HTMLInputElement).checked
+                 })} />
+          ${label}
+        </label>`)}
     </div>
   `
 }

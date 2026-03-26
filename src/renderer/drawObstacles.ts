@@ -13,6 +13,7 @@ const LABEL_MIN_PX = 10
 
 export function drawObstacles(rc: RenderContext, transparentOnly: boolean): void {
   for (const obstacle of rc.wall.obstacles) {
+    if (obstacle.display.visible === false) continue
     if (obstacle.display.transparent !== transparentOnly) continue
     drawObstacle(rc, obstacle)
   }
